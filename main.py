@@ -2,7 +2,7 @@ import cv2
 import time
 import mediapipe as mp
 
-# ================== 模型路径 ==================
+# ================== Model paths ==================
 hand_model = "./hand_landmarker.task"
 gesture_model = "./gesture_recognizer.task"
 
@@ -16,12 +16,12 @@ HandLandmarkerResult = mp.tasks.vision.HandLandmarkerResult
 GestureRecognizer = mp.tasks.vision.GestureRecognizer
 GestureRecognizerOptions = mp.tasks.vision.GestureRecognizerOptions
 
-# ================== 全局状态 ==================
+# ================== Global state ==================
 latest_landmarks = None
 latest_handedness = None
 current_gesture = "None"
 
-# ================== HandLandmarker 回调 ==================
+# ================== HandLandmarker callback ==================
 def hand_callback(result: HandLandmarkerResult, output_image, timestamp_ms):
     global latest_landmarks, latest_handedness
     if result.hand_landmarks:
@@ -31,7 +31,7 @@ def hand_callback(result: HandLandmarkerResult, output_image, timestamp_ms):
         latest_landmarks = None
         latest_handedness = None
 
-# ================== GestureRecognizer 回调 ==================
+# ================== GestureRecognizer callback ==================
 def gesture_callback(result, output_image, timestamp_ms):
     global current_gesture
     if result.gestures:
@@ -44,7 +44,7 @@ def gesture_callback(result, output_image, timestamp_ms):
 hand_options = HandLandmarkerOptions(
     base_options=BaseOptions(model_asset_path=hand_model),
     running_mode=VisionRunningMode.LIVE_STREAM,
-    num_hands=1,   # 👈 关键：最多检测 1 只手
+    num_hands=1,   # 👈 Key: detect up to 1 hand
     min_hand_detection_confidence=0.5,
     min_hand_presence_confidence=0.5,
     min_tracking_confidence=0.5,
@@ -58,10 +58,10 @@ gesture_options = GestureRecognizerOptions(
     result_callback=gesture_callback
 )
 
-# ------------------ 打开摄像头 ------------------
+# ------------------ Open webcam ------------------
 cap = cv2.VideoCapture(0)
 if not cap.isOpened():
-    print("无法打开摄像头")
+    print("Cannot open camera")
     exit()
 
 with HandLandmarker.create_from_options(hand_options) as hand_landmarker, \
@@ -82,44 +82,44 @@ with HandLandmarker.create_from_options(hand_options) as hand_landmarker, \
 
         timestamp_ms = int(time.time() * 1000)
 
-        # ===== Tasks 推理 =====
+        # ===== Tasks inference =====
         hand_landmarker.detect_async(mp_image, timestamp_ms)
         gesture_recognizer.recognize_async(mp_image, timestamp_ms)
 
-        # ===== 手动绘制骨架 =====
+        # ===== Manually draw skeleton =====
         if latest_landmarks and latest_handedness:
             for idx, hand in enumerate(latest_landmarks):
                 hand_label = latest_handedness[idx][0].category_name  # "Left" or "Right"
 
-                # 左右手不同颜色
+                # Different colors for left and right hands
                 if hand_label == "Left":
-                    color = (255, 0, 0)   # 蓝色
+                    color = (255, 0, 0)   # Blue
                 else:
-                    color = (0, 255, 0)   # 绿色
+                    color = (0, 255, 0)   # Green
                 #for hand in latest_landmarks:
-                # 先画点
+                # First draw points
                 for lm in hand:
                     cx, cy = int(lm.x * w), int(lm.y * h)
-                    # 根据 z 计算半径
+                    # Calculate radius based on z
                     z = lm.z
-                    scale = - z * 0.5   # 0.5 是调节系数
+                    scale = - z * 0.5   # 0.5 is scaling factor
                     radius = int(200 * scale)
 
-                    # 防止太小或太大
+                    # Prevent too small or too large
                     radius = max(1, min(radius, 10))
 
                     cv2.circle(frame, (cx, cy), radius, color, -1)
                     #cv2.circle(frame, (cx, cy), 4, color, -1)
 
-                # ===== 画五个手指实线 =====
+                # ===== Draw solid lines for five fingers =====
                 FINGER_CONNECTIONS = [
-                    [1, 2, 3, 4],        # 拇指
-                    [5, 6, 7, 8],        # 食指
-                    [9, 10, 11, 12],     # 中指
-                    [13, 14, 15, 16],    # 无名指
-                    [17, 18, 19, 20]     # 小指
+                    [1, 2, 3, 4],        # Thumb
+                    [5, 6, 7, 8],        # Index
+                    [9, 10, 11, 12],     # Middle
+                    [13, 14, 15, 16],    # Ring
+                    [17, 18, 19, 20]     # Pinky
                 ]
-                # 再画线（五指）
+                # Draw lines (five fingers)
                 for finger in FINGER_CONNECTIONS:
                     for i in range(len(finger) - 1):
                         start = hand[finger[i]]
@@ -128,13 +128,13 @@ with HandLandmarker.create_from_options(hand_options) as hand_landmarker, \
                         x1, y1 = int(start.x * w), int(start.y * h)
                         x2, y2 = int(end.x * w), int(end.y * h)
 
-                        z_base = hand[8].z  # 用食指尖作为基准
+                        z_base = hand[8].z  # Use index fingertip as base
                         scale = -z_base
                         thickness = int(50 * scale)
                         thickness = max(1, min(thickness, 6))
                         
                         cv2.line(frame, (x1, y1), (x2, y2), color, thickness)
-                #大拇指根链接
+                # Connect thumb root
                 start = hand[1]
                 end = hand[0]
 
@@ -142,7 +142,7 @@ with HandLandmarker.create_from_options(hand_options) as hand_landmarker, \
                 x2, y2 = int(end.x * w), int(end.y * h)
 
                 cv2.line(frame, (x1, y1), (x2, y2), color, 2)
-                #四手指根连接
+                # Connect roots of four fingers
                 for i in range(5, 14, 4):
                     start = hand[i]
                     end = hand[i+4]
@@ -151,7 +151,7 @@ with HandLandmarker.create_from_options(hand_options) as hand_landmarker, \
                     x2, y2 = int(end.x * w), int(end.y * h)
 
                     cv2.line(frame, (x1, y1), (x2, y2), color, 2)
-                # ===== 手腕连接 =====
+                # ===== Wrist connections =====
                 cv2.line(frame,
                  (int(hand[5].x * w), int(hand[5].y * h)),
                  (int(hand[0].x * w), int(hand[0].y * h)),
@@ -161,14 +161,14 @@ with HandLandmarker.create_from_options(hand_options) as hand_landmarker, \
                  (int(hand[17].x * w), int(hand[17].y * h)),
                  (int(hand[0].x * w), int(hand[0].y * h)),
                  color, 2)
-                # ===== 显示 Left / Right 文本 =====
+                # ===== Display Left / Right text =====
                 text_x = int(hand[0].x * w)
                 text_y = int(hand[0].y * h) - 10
                 cv2.putText(frame, hand_label, (text_x, text_y),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
 
-                #用食指尖为基准测试输出值，并画上固定大小的圆圈做分别比较
-                z_base = hand[8].z  # 用食指尖作为基准
+                # Use index fingertip as reference and draw a fixed size circle for comparison
+                z_base = hand[8].z  # Use index fingertip as base
                 x_base = hand[8].x
                 y_base = hand[8].y
                 
@@ -204,7 +204,7 @@ with HandLandmarker.create_from_options(hand_options) as hand_landmarker, \
                     2
                 )
 
-        # ===== 显示手势 =====
+        # ===== Display gesture =====
         cv2.putText(
             frame,
             f"Gesture: {current_gesture}",
