@@ -1,3 +1,9 @@
+## 🎥 Demo Video
+
+👉 https://youtu.be/gibrI5d7Ze4
+
+This project demonstrates real-time hand landmark detection and gesture recognition using Google MediaPipe, showcasing practical applications of computer vision for interactive systems.
+
 # MediaPipe Hand Gesture Recognition with Google AI Edge
 
 This project demonstrates real-time **hand gesture recognition** and **hand landmark detection** using **Google AI Edge 2025 library** and **MediaPipe**. It provides a Python implementation for hands-on practice and can be extended to other recognition tasks such as **face landmark detection** and **pose landmark detection**.
